@@ -1,0 +1,7 @@
+package com.tic.app.gameengineserviceapp.repository;
+
+import com.tic.app.gameengineserviceapp.domain.Game;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface GameRepository extends JpaRepository<Game, String> {
+}

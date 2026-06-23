@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distributed Tic Tac Toe</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 640px;
+            margin: 40px auto;
+            padding: 0 20px;
+            background: #f5f5f5;
+        }
+        h1 { color: #333; margin-bottom: 8px; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #aaa; cursor: not-allowed; }
+
+        #status {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 10px 0 16px;
+            min-height: 28px;
+        }
+        #status.win-x { color: #e74c3c; }
+        #status.win-o { color: #2980b9; }
+        #status.draw  { color: #7f8c8d; }
+
+        table { border-collapse: collapse; margin-bottom: 20px; }
+        td {
+            width: 90px;
+            height: 90px;
+            border: 3px solid #555;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 42px;
+            font-weight: bold;
+            background: #fff;
+        }
+        td.x { color: #e74c3c; }
+        td.o { color: #2980b9; }
+        td.winner { background: #fef9c3; }
+        td.just-placed { animation: pop 0.25s ease; }
+        @keyframes pop {
+            0%   { transform: scale(0.4); opacity: 0.3; }
+            70%  { transform: scale(1.15); }
+            100% { transform: scale(1);   opacity: 1; }
+        }
+
+        #history h3 { margin: 0 0 8px; font-size: 15px; color: #555; }
+        #moveList {
+            list-style: none;
+            padding: 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        #moveList li {
+            background: #fff;
+            padding: 3px 10px;
+            border-radius: 3px;
+            border: 1px solid #ddd;
+            font-family: monospace;
+            font-size: 13px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        #moveList li.visible { opacity: 1; }
+
+        #error {
+            color: #c0392b;
+            background: #fdecea;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Distributed Tic Tac Toe</h1>
+
+    <button id="startBtn" onclick="startSimulation()">&#9654; Start Simulation</button>
+    <div id="error"></div>
+    <div id="status"></div>
+    <div id="board"></div>
+    <div id="history" style="display:none">
+        <h3>Move history</h3>
+        <ul id="moveList"></ul>
+    </div>
+
+    <script>
+        const GATEWAY = 'http://localhost:8080';
+        const MOVE_DELAY_MS = 500;
+
+        const WIN_CONDITIONS = [
+            [0,1,2],[3,4,5],[6,7,8],
+            [0,3,6],[1,4,7],[2,5,8],
+            [0,4,8],[2,4,6]
+        ];
+
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        async function startSimulation() {
+            const btn = document.getElementById('startBtn');
+            btn.disabled = true;
+            clearError();
+            setStatus('');
+            renderEmptyBoard();
+            clearHistory();
+
+            try {
+                setStatus('Creating session…');
+                const sessionRes = await fetch(GATEWAY + '/api/sessions', { method: 'POST' });
+                if (!sessionRes.ok) throw new Error('Failed to create session: ' + sessionRes.status);
+                const session = await sessionRes.json();
+
+                setStatus('Simulating game…');
+                const simRes = await fetch(GATEWAY + '/api/sessions/' + session.sessionId + '/simulate', { method: 'POST' });
+                if (!simRes.ok) throw new Error('Failed to run simulation: ' + simRes.status);
+                const simulation = await simRes.json();
+
+                const moves = simulation.moveHistory;
+                const boardCells = Array(9).fill(' ');
+
+                // Show history container
+                const list = document.getElementById('moveList');
+                document.getElementById('history').style.display = 'block';
+
+                for (let i = 0; i < moves.length; i++) {
+                    const [player, posStr] = moves[i].split(':');
+                    const pos = parseInt(posStr, 10);
+                    boardCells[pos] = player;
+
+                    updateCell(pos, player);
+
+                    const li = document.createElement('li');
+                    li.textContent = (i + 1) + '. ' + moves[i];
+                    list.appendChild(li);
+                    requestAnimationFrame(() => li.classList.add('visible'));
+
+                    await delay(MOVE_DELAY_MS);
+                }
+
+                const winLine = findWinningLine(boardCells);
+                if (winLine) winLine.forEach(idx => highlightCell(idx));
+                showFinalStatus(simulation.finalGameStatus);
+
+            } catch (err) {
+                showError(err.message);
+                setStatus('');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function renderEmptyBoard() {
+            const container = document.getElementById('board');
+            let html = '<table>';
+            for (let row = 0; row < 3; row++) {
+                html += '<tr>';
+                for (let col = 0; col < 3; col++) {
+                    html += '<td id="cell-' + (row * 3 + col) + '"></td>';
+                }
+                html += '</tr>';
+            }
+            html += '</table>';
+            container.innerHTML = html;
+        }
+
+        function updateCell(index, player) {
+            const td = document.getElementById('cell-' + index);
+            if (!td) return;
+            td.textContent = player;
+            td.className = player.toLowerCase() + ' just-placed';
+            td.addEventListener('animationend', () => td.classList.remove('just-placed'), { once: true });
+        }
+
+        function highlightCell(index) {
+            const td = document.getElementById('cell-' + index);
+            if (td) td.classList.add('winner');
+        }
+
+        function clearHistory() {
+            document.getElementById('moveList').innerHTML = '';
+            document.getElementById('history').style.display = 'none';
+        }
+
+        function setStatus(msg, cls) {
+            const el = document.getElementById('status');
+            el.textContent = msg;
+            el.className = cls || '';
+        }
+
+        function showFinalStatus(gameStatus) {
+            const map = {
+                'X_WON': ['Player X wins!', 'win-x'],
+                'O_WON': ['Player O wins!', 'win-o'],
+                'DRAW':  ["It's a draw!",   'draw'],
+            };
+            const [msg, cls] = map[gameStatus] || [gameStatus, ''];
+            setStatus(msg, cls);
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('error');
+            el.textContent = msg;
+            el.style.display = 'block';
+        }
+
+        function clearError() {
+            const el = document.getElementById('error');
+            el.style.display = 'none';
+            el.textContent = '';
+        }
+
+        function findWinningLine(cells) {
+            for (const [a, b, c] of WIN_CONDITIONS) {
+                if (cells[a] !== ' ' && cells[a] === cells[b] && cells[b] === cells[c]) {
+                    return [a, b, c];
+                }
+            }
+            return null;
+        }
+
+        // Show empty board immediately on page load
+        renderEmptyBoard();
+    </script>
+</body>
+</html>

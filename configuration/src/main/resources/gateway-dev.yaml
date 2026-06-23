@@ -2,13 +2,7 @@ server:
   port: 8080
 
 spring:
-  application:
-    name: gateway
-  config:
-    import: "optional:configserver:http://localhost:8888"
   cloud:
-    config:
-      profile: dev
     gateway:
       mvc:
         routes:
@@ -16,16 +10,13 @@ spring:
             uri: lb://game-engine-service-app
             predicates:
               - Path=/api/games/**
+
           - id: game-session-route
             uri: lb://game-session-service-app
             predicates:
               - Path=/api/sessions/**
+
           - id: ui-route
             uri: lb://ui-service-app
             predicates:
               - Path=/**
-
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
