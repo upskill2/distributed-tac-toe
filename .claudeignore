@@ -1,0 +1,12 @@
+.gitignore# Build output
+target/
+
+# IDE
+.idea/
+*.iml
+
+# OS
+.DS_Store
+
+# Local config (may contain secrets)
+src/main/resources/application_local*.yaml
