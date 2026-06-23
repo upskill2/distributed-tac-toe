@@ -1,0 +1,15 @@
+# Task
+- implement functionality from 🦩Flamingo Home Assignment - Backend Engineer.md
+- game should be played automatically (simulation) as stated in the task description. Make few scenarios or random scenarios
+- this should be microservices architecture. In this project i have modules for gateway, config-server and configuration repos - use them
+- in configuration repo create yaml files for engine and session and ui and gateway services. At this stage create dev configs files only
+- make use of spring eureka discovery and config service. Dont forget to set in configuration project different ports for each of the application. Use default port for gatewy, eureka and config service
+- for ui service make something simple - html that accepts input and passes to session or engine service
+- for tic tac toe business logic use impl from this page https://wittgeo.medium.com/building-a-tic-tac-toe-game-in-java-d0853e20a04e
+- use h2 in memory database, rest api (springboot), add missing dependencies if needed
+- for Optional Enhancements skip all points except of cloud gateway and config server
+- for error handling use rest controller advise and custom errors
+- dont implement integration test at this stage
+- use response and create response dto, where necessary
+- add @Validated in controller, @NotNull validations in dto
+- expected result - set up business logic and inter service communications for the task, make sure service start and game can be played
