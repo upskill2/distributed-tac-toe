@@ -40,6 +40,9 @@ public class Session {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
+    @Version
+    private Long version;
+
     @PrePersist
     void prePersist() {
         createdAt = LocalDateTime.now();

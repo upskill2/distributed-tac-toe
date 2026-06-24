@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.NoSuchElementException;
 import java.util.UUID;
@@ -38,6 +39,7 @@ public class GameService {
         return gameMapper.toCreateGameResponse(game);
     }
 
+    @Transactional
     public GameResponse makeMove(String gameId, int position) {
         log.info("Making move: gameId={} position={}", gameId, position);
         Game game = gameRepository.findById(UUID.fromString(gameId))

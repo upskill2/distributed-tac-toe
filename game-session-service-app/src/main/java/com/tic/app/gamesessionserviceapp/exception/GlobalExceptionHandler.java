@@ -1,5 +1,7 @@
 package com.tic.app.gamesessionserviceapp.exception;
 
+import jakarta.persistence.OptimisticLockException;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -21,5 +23,11 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public Map<String, String> handleNotFound(NoSuchElementException ex) {
         return Map.of("error", "Session not found");
+    }
+
+    @ExceptionHandler(OptimisticLockException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public Map<String, String> handleOptimisticLock(OptimisticLockException ex) {
+        return Map.of("error", "Simulation already started for this session — concurrent request rejected");
     }
 }

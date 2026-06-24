@@ -35,6 +35,9 @@ public class Game {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
+    @Version
+    private Long version;
+
     @PrePersist
     void prePersist() {
         createdAt = LocalDateTime.now();

@@ -1,5 +1,7 @@
 package com.tic.app.gameengineserviceapp.exception;
 
+import jakarta.persistence.OptimisticLockException;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -34,5 +36,11 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public Map<String, String> handleNotFound(NoSuchElementException ex) {
         return Map.of("error", "Game not found");
+    }
+
+    @ExceptionHandler(OptimisticLockException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public Map<String, String> handleOptimisticLock(OptimisticLockException ex) {
+        return Map.of("error", "Move rejected — game was modified concurrently, please retry");
     }
 }

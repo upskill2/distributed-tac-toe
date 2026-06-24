@@ -8,12 +8,14 @@ import com.tic.app.gamesessionserviceapp.domain.Session;
 import com.tic.app.gamesessionserviceapp.domain.SessionStatus;
 import com.tic.app.gamesessionserviceapp.dto.CreateSessionResponse;
 import com.tic.app.gamesessionserviceapp.dto.SessionResponse;
+import com.tic.app.gamesessionserviceapp.exception.SessionException;
 import com.tic.app.gamesessionserviceapp.mapper.SessionMapper;
 import com.tic.app.gamesessionserviceapp.repository.SessionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
@@ -51,19 +53,24 @@ public class SessionService {
         return sessionMapper.toCreateSessionResponse(session);
     }
 
+    @Transactional
     public SseEmitter simulate(String sessionId) {
+        Session session = sessionRepository.findById(UUID.fromString(sessionId))
+                .orElseThrow(() -> new NoSuchElementException(String.format("Session not found: %s", sessionId)));
+
+        if (session.getStatus() != SessionStatus.CREATED) {
+            throw new SessionException(String.format("Session already %s: %s", session.getStatus(), sessionId));
+        }
+
+        session.setStatus(SessionStatus.SIMULATING);
+        sessionRepository.saveAndFlush(session);
+
+        String gameId = session.getGameId();
         SseEmitter emitter = new SseEmitter(60_000L);
 
         executor.execute(() -> {
             try {
                 log.info("Starting simulation for sessionId={}", sessionId);
-                Session session = sessionRepository.findById(UUID.fromString(sessionId))
-                        .orElseThrow(() -> new NoSuchElementException(String.format("Session not found: %s", sessionId)));
-
-                session.setStatus(SessionStatus.SIMULATING);
-                session = sessionRepository.save(session);
-
-                String gameId = session.getGameId();
                 GameEngineGameResponse gameState = gameEngineClient.getGame(gameId);
                 List<String> moveHistory = new ArrayList<>();
                 Random random = new Random();
@@ -81,10 +88,12 @@ public class SessionService {
 
                     emitter.send(SseEmitter.event().name("move").data(gameState, MediaType.APPLICATION_JSON));
                 }
-
-                session.getMoveHistory().addAll(moveHistory);
-                session.setStatus(SessionStatus.COMPLETED);
-                sessionRepository.save(session);
+                
+                Session completed = sessionRepository.findById(UUID.fromString(sessionId))
+                        .orElseThrow(() -> new NoSuchElementException(String.format("Session not found: %s", sessionId)));
+                completed.getMoveHistory().addAll(moveHistory);
+                completed.setStatus(SessionStatus.COMPLETED);
+                sessionRepository.save(completed);
 
                 log.info("Simulation done: sessionId={} gameId={} result={} totalMoves={}",
                         sessionId, gameId, gameState.status(), moveHistory.size());
