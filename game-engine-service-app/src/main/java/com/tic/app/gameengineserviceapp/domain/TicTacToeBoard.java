@@ -13,9 +13,9 @@ public class TicTacToeBoard {
         {0, 4, 8}, {2, 4, 6}
     };
 
-    public static String applyMove(String board, int position, char player) {
+    public static String applyMove(String board, int position, Player player) {
         char[] cells = board.toCharArray();
-        cells[position] = player;
+        cells[position] = player.symbol();
         return new String(cells);
     }
 
@@ -25,7 +25,7 @@ public class TicTacToeBoard {
             char b = board.charAt(condition[1]);
             char c = board.charAt(condition[2]);
             if (a != ' ' && a == b && b == c) {
-                return a == 'X' ? GameStatus.X_WON : GameStatus.O_WON;
+                return a == Player.X.symbol() ? GameStatus.X_WON : GameStatus.O_WON;
             }
         }
         return isBoardFull(board) ? GameStatus.DRAW : GameStatus.ONGOING;

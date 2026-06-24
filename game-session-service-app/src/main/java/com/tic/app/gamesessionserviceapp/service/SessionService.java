@@ -3,11 +3,14 @@ package com.tic.app.gamesessionserviceapp.service;
 import com.tic.app.gamesessionserviceapp.client.GameEngineClient;
 import com.tic.app.gamesessionserviceapp.client.dto.GameEngineCreateResponse;
 import com.tic.app.gamesessionserviceapp.client.dto.GameEngineGameResponse;
+import com.tic.app.gamesessionserviceapp.domain.GameStatus;
+import com.tic.app.gamesessionserviceapp.domain.Player;
 import com.tic.app.gamesessionserviceapp.domain.Session;
 import com.tic.app.gamesessionserviceapp.domain.SessionStatus;
 import com.tic.app.gamesessionserviceapp.dto.CreateSessionResponse;
 import com.tic.app.gamesessionserviceapp.dto.SessionResponse;
 import com.tic.app.gamesessionserviceapp.dto.SimulateResponse;
+import com.tic.app.gamesessionserviceapp.mapper.SessionMapper;
 import com.tic.app.gamesessionserviceapp.repository.SessionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Random;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -25,25 +29,27 @@ public class SessionService {
 
     private final SessionRepository sessionRepository;
     private final GameEngineClient gameEngineClient;
+    private final SessionMapper sessionMapper;
 
     public CreateSessionResponse createSession() {
         log.info("Creating new session - calling game engine");
         GameEngineCreateResponse engineResponse = gameEngineClient.createGame();
         log.info("Game engine responded: gameId={}", engineResponse.gameId());
 
-        Session session = new Session();
-        session.setGameId(engineResponse.gameId());
-        session.setStatus(SessionStatus.CREATED);
+        Session session = Session.builder()
+                .gameId(engineResponse.gameId())
+                .status(SessionStatus.CREATED)
+                .build();
         session = sessionRepository.save(session);
 
         log.info("Session created: id={} gameId={}", session.getId(), session.getGameId());
-        return new CreateSessionResponse(session.getId(), session.getGameId(), session.getStatus().name());
+        return sessionMapper.toCreateSessionResponse(session);
     }
 
     public SimulateResponse simulate(String sessionId) {
         log.info("Starting simulation for sessionId={}", sessionId);
-        Session session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new NoSuchElementException("Session not found: " + sessionId));
+        Session session = sessionRepository.findById(UUID.fromString(sessionId))
+                .orElseThrow(() -> new NoSuchElementException(String.format("Session not found: %s", sessionId)));
 
         session.setStatus(SessionStatus.SIMULATING);
         session = sessionRepository.save(session);
@@ -52,41 +58,34 @@ public class SessionService {
         GameEngineGameResponse gameState = gameEngineClient.getGame(gameId);
         List<String> moveHistory = new ArrayList<>();
         Random random = new Random();
-        char currentPlayer = 'X';
+        Player currentPlayer = Player.X;
 
-        while ("ONGOING".equals(gameState.status())) {
+        while (gameState.status() == GameStatus.ONGOING) {
             List<Integer> available = getAvailablePositions(gameState.board());
             if (available.isEmpty()) break;
 
             int position = available.get(random.nextInt(available.size()));
             log.debug("Player {} picks position {}", currentPlayer, position);
             gameState = gameEngineClient.makeMove(gameId, position);
-            moveHistory.add(currentPlayer + ":" + position);
-            currentPlayer = (currentPlayer == 'X') ? 'O' : 'X';
+            moveHistory.add(String.format("%s:%d", currentPlayer.name(), position));
+            currentPlayer = currentPlayer.next();
         }
 
         session.getMoveHistory().addAll(moveHistory);
         session.setStatus(SessionStatus.COMPLETED);
         sessionRepository.save(session);
 
-        log.info("Simulation done: sessionId={} gameId={} result={} totalMoves={}", sessionId, gameId, gameState.status(), moveHistory.size());
-        return new SimulateResponse(sessionId, gameId, gameState.status(), moveHistory);
+        log.info("Simulation done: sessionId={} gameId={} result={} totalMoves={}",
+                sessionId, gameId, gameState.status(), moveHistory.size());
+        return sessionMapper.toSimulateResponse(session, gameState.status(), moveHistory);
     }
 
     public SessionResponse getSession(String sessionId) {
-        Session session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new NoSuchElementException("Session not found: " + sessionId));
+        Session session = sessionRepository.findById(UUID.fromString(sessionId))
+                .orElseThrow(() -> new NoSuchElementException(String.format("Session not found: %s", sessionId)));
 
         GameEngineGameResponse gameState = gameEngineClient.getGame(session.getGameId());
-
-        return new SessionResponse(
-                session.getId(),
-                session.getGameId(),
-                session.getStatus().name(),
-                gameState.status(),
-                session.getMoveHistory(),
-                session.getCreatedAt()
-        );
+        return sessionMapper.toSessionResponse(session, gameState);
     }
 
     private List<Integer> getAvailablePositions(String board) {

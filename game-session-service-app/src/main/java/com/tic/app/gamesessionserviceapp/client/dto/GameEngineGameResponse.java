@@ -1,12 +1,15 @@
 package com.tic.app.gamesessionserviceapp.client.dto;
 
+import com.tic.app.gamesessionserviceapp.domain.GameStatus;
+import com.tic.app.gamesessionserviceapp.domain.Player;
+
 import java.time.LocalDateTime;
 
 public record GameEngineGameResponse(
         String gameId,
         String board,
-        char currentPlayer,
-        String status,
+        Player currentPlayer,
+        GameStatus status,
         LocalDateTime createdAt
 ) {
 }

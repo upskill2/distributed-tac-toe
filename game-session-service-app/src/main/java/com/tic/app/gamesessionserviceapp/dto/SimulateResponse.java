@@ -1,11 +1,16 @@
 package com.tic.app.gamesessionserviceapp.dto;
 
-import java.util.List;
+import com.tic.app.gamesessionserviceapp.domain.GameStatus;
+import lombok.Builder;
 
+import java.util.List;
+import java.util.UUID;
+
+@Builder
 public record SimulateResponse(
-        String sessionId,
+        UUID sessionId,
         String gameId,
-        String finalGameStatus,
+        GameStatus finalGameStatus,
         List<String> moveHistory
 ) {
 }

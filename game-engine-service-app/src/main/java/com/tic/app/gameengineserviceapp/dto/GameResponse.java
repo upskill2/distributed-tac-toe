@@ -1,12 +1,19 @@
 package com.tic.app.gameengineserviceapp.dto;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
+import com.tic.app.gameengineserviceapp.domain.GameStatus;
+import com.tic.app.gameengineserviceapp.domain.Player;
+
+import lombok.Builder;
+
+@Builder
 public record GameResponse(
-        String gameId,
+        UUID gameId,
         String board,
-        char currentPlayer,
-        String status,
+        Player currentPlayer,
+        GameStatus status,
         LocalDateTime createdAt
 ) {
 }

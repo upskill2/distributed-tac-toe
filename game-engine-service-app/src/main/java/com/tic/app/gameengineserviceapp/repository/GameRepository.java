@@ -1,7 +1,10 @@
 package com.tic.app.gameengineserviceapp.repository;
 
-import com.tic.app.gameengineserviceapp.domain.Game;
+import java.util.UUID;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface GameRepository extends JpaRepository<Game, String> {
+import com.tic.app.gameengineserviceapp.domain.Game;
+
+public interface GameRepository extends JpaRepository<Game, UUID> {
 }

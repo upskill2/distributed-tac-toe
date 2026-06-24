@@ -1,4 +1,12 @@
 package com.tic.app.gamesessionserviceapp.dto;
 
-public record CreateSessionResponse(String sessionId, String gameId, String status) {
+import java.util.UUID;
+
+import com.tic.app.gamesessionserviceapp.domain.SessionStatus;
+
+import lombok.Builder;
+
+@Builder
+public record CreateSessionResponse(UUID sessionId, String gameId, SessionStatus status) {
+
 }

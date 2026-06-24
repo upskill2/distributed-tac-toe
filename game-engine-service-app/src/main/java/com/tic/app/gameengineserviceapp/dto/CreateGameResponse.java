@@ -1,4 +1,11 @@
 package com.tic.app.gameengineserviceapp.dto;
 
-public record CreateGameResponse(String gameId, String status) {
+import java.util.UUID;
+
+import com.tic.app.gameengineserviceapp.domain.GameStatus;
+
+import lombok.Builder;
+
+@Builder
+public record CreateGameResponse(UUID gameId, GameStatus status) {
 }

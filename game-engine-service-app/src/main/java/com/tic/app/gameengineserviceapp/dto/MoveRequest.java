@@ -8,6 +8,6 @@ public record MoveRequest(
         @NotNull(message = "Position must not be null")
         @Min(value = 0, message = "Position must be between 0 and 8")
         @Max(value = 8, message = "Position must be between 0 and 8")
-        Integer position
+        int position
 ) {
 }
