@@ -30,7 +30,7 @@ public class Session {
     @Column(nullable = false)
     private SessionStatus status;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "session_moves", joinColumns = @JoinColumn(name = "session_id"))
     @Column(name = "move")
     @OrderColumn(name = "move_index")

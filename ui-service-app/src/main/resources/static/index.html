@@ -101,17 +101,12 @@
 
     <script>
         const GATEWAY = 'http://localhost:8080';
-        const MOVE_DELAY_MS = 500;
 
         const WIN_CONDITIONS = [
             [0,1,2],[3,4,5],[6,7,8],
             [0,3,6],[1,4,7],[2,5,8],
             [0,4,8],[2,4,6]
         ];
-
-        function delay(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
-        }
 
         async function startSimulation() {
             const btn = document.getElementById('startBtn');
@@ -121,42 +116,43 @@
             renderEmptyBoard();
             clearHistory();
 
+            let prevBoard = '         '; // 9 spaces — empty board
+            let lastGame  = null;
+
             try {
                 setStatus('Creating session…');
                 const sessionRes = await fetch(GATEWAY + '/api/sessions', { method: 'POST' });
                 if (!sessionRes.ok) throw new Error('Failed to create session: ' + sessionRes.status);
                 const session = await sessionRes.json();
 
-                setStatus('Simulating game…');
-                const simRes = await fetch(GATEWAY + '/api/sessions/' + session.sessionId + '/simulate', { method: 'POST' });
-                if (!simRes.ok) throw new Error('Failed to run simulation: ' + simRes.status);
-                const simulation = await simRes.json();
-
-                const moves = simulation.moveHistory;
-                const boardCells = Array(9).fill(' ');
-
-                // Show history container
-                const list = document.getElementById('moveList');
+                setStatus('Simulating…');
                 document.getElementById('history').style.display = 'block';
 
-                for (let i = 0; i < moves.length; i++) {
-                    const [player, posStr] = moves[i].split(':');
-                    const pos = parseInt(posStr, 10);
-                    boardCells[pos] = player;
+                // POST to simulate — session service returns SSE stream as chunked response.
+                // EventSource only supports GET, so we consume the stream with fetch + ReadableStream.
+                await consumeSSE(
+                    GATEWAY + '/api/sessions/' + session.sessionId + '/simulate',
+                    'POST',
+                    (eventName, data) => {
+                        if (eventName === 'move') {
+                            const game = JSON.parse(data);
+                            const move = detectMove(prevBoard, game.board);
+                            if (move) {
+                                updateCell(move.position, move.player);
+                                appendMoveHistory(move.player, move.position);
+                            }
+                            prevBoard = game.board;
+                            lastGame  = game;
+                        }
+                        // 'done' event signals end — the stream closes naturally after it
+                    }
+                );
 
-                    updateCell(pos, player);
-
-                    const li = document.createElement('li');
-                    li.textContent = (i + 1) + '. ' + moves[i];
-                    list.appendChild(li);
-                    requestAnimationFrame(() => li.classList.add('visible'));
-
-                    await delay(MOVE_DELAY_MS);
+                if (lastGame) {
+                    const winLine = findWinningLine(lastGame.board);
+                    if (winLine) winLine.forEach(idx => highlightCell(idx));
+                    showFinalStatus(lastGame.status);
                 }
-
-                const winLine = findWinningLine(boardCells);
-                if (winLine) winLine.forEach(idx => highlightCell(idx));
-                showFinalStatus(simulation.finalGameStatus);
 
             } catch (err) {
                 showError(err.message);
@@ -164,6 +160,51 @@
             } finally {
                 btn.disabled = false;
             }
+        }
+
+        /**
+         * Reads an SSE stream from an arbitrary HTTP method using fetch + ReadableStream.
+         * Calls onEvent(eventName, data) for each complete SSE event received.
+         */
+        async function consumeSSE(url, method, onEvent) {
+            const response = await fetch(url, { method });
+            if (!response.ok) throw new Error('Simulation request failed: ' + response.status);
+
+            const reader  = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+
+                // SSE events are separated by a blank line (\n\n)
+                const chunks = buffer.split('\n\n');
+                buffer = chunks.pop(); // keep the incomplete trailing chunk
+
+                for (const chunk of chunks) {
+                    if (!chunk.trim()) continue;
+                    let eventName = 'message';
+                    let data = '';
+                    for (const line of chunk.split('\n')) {
+                        if (line.startsWith('event:')) eventName = line.slice(6).trim();
+                        else if (line.startsWith('data:'))  data      = line.slice(5).trim();
+                    }
+                    onEvent(eventName, data);
+                }
+            }
+        }
+
+        // Returns {position, player} for the cell that changed between two board strings
+        function detectMove(prevBoard, newBoard) {
+            for (let i = 0; i < 9; i++) {
+                if (prevBoard[i] === ' ' && newBoard[i] !== ' ') {
+                    return { position: i, player: newBoard[i] };
+                }
+            }
+            return null;
         }
 
         function renderEmptyBoard() {
@@ -191,6 +232,14 @@
         function highlightCell(index) {
             const td = document.getElementById('cell-' + index);
             if (td) td.classList.add('winner');
+        }
+
+        function appendMoveHistory(player, position) {
+            const list = document.getElementById('moveList');
+            const li = document.createElement('li');
+            li.textContent = (list.children.length + 1) + '. ' + player + ':' + position;
+            list.appendChild(li);
+            requestAnimationFrame(() => li.classList.add('visible'));
         }
 
         function clearHistory() {
@@ -226,9 +275,9 @@
             el.textContent = '';
         }
 
-        function findWinningLine(cells) {
+        function findWinningLine(board) {
             for (const [a, b, c] of WIN_CONDITIONS) {
-                if (cells[a] !== ' ' && cells[a] === cells[b] && cells[b] === cells[c]) {
+                if (board[a] !== ' ' && board[a] === board[b] && board[b] === board[c]) {
                     return [a, b, c];
                 }
             }

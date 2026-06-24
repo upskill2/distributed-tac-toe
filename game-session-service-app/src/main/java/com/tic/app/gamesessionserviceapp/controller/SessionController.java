@@ -2,7 +2,6 @@ package com.tic.app.gamesessionserviceapp.controller;
 
 import com.tic.app.gamesessionserviceapp.dto.CreateSessionResponse;
 import com.tic.app.gamesessionserviceapp.dto.SessionResponse;
-import com.tic.app.gamesessionserviceapp.dto.SimulateResponse;
 import com.tic.app.gamesessionserviceapp.service.SessionService;
 
 import lombok.RequiredArgsConstructor;
@@ -12,6 +11,7 @@ import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Slf4j
 @RestController
@@ -29,7 +29,7 @@ public class SessionController {
     }
 
     @PostMapping("/{sessionId}/simulate")
-    public SimulateResponse simulate(@PathVariable @NonNull String sessionId) {
+    public SseEmitter simulate(@PathVariable @NonNull String sessionId) {
         return sessionService.simulate(sessionId);
     }
 
