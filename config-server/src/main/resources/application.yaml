@@ -4,10 +4,10 @@ server:
 spring:
   application:
     name: config-server
-  profiles:
-    active: native
   cloud:
     config:
       server:
-        native:
-          search-locations: "file:///${user.home}/IdeaProjects/distributed-tac-toe/configuration/src/main/resources"
+        git:
+          uri: https://github.com/upskill2/distributed-tac-toe
+          default-label: develop
+          search-paths: configuration

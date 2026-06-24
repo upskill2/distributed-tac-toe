@@ -1,14 +1,8 @@
-server:
-  port: 8083
-
 spring:
   application:
     name: ui-service-app
   config:
     import: "optional:configserver:http://localhost:8888"
-  cloud:
-    config:
-      profile: dev
 
 eureka:
   client:

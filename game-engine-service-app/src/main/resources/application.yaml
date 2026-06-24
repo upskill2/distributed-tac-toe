@@ -1,14 +1,8 @@
-server:
-  port: 8081
-
 spring:
   application:
     name: game-engine-service-app
   config:
     import: "optional:configserver:http://localhost:8888"
-  cloud:
-    config:
-      profile: dev
 
 eureka:
   client:
