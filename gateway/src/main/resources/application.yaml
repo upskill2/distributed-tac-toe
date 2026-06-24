@@ -11,19 +11,19 @@ spring:
       profile: dev
     gateway:
       mvc:
-        routes:
-          - id: game-engine-route
-            uri: lb://game-engine-service-app
-            predicates:
-              - Path=/api/games/**
-          - id: game-session-route
-            uri: lb://game-session-service-app
-            predicates:
-              - Path=/api/sessions/**
-          - id: ui-route
-            uri: lb://ui-service-app
-            predicates:
-              - Path=/**
+        globalcors:
+          corsConfigurations:
+            '[/**]':
+              allowedOrigins:
+                - "http://localhost:8083"
+                - "http://localhost:8080"
+              allowedMethods:
+                - GET
+                - POST
+                - PUT
+                - DELETE
+                - OPTIONS
+              allowedHeaders: "*"
 
 eureka:
   client:
