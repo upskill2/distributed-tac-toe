@@ -4,15 +4,7 @@
 
 ## 1. N+1 Problem
 
-`SessionService.getSession()` fetches the session from the local database and then makes a synchronous HTTP call to the game engine to retrieve the current game state. This is fine for a single-session lookup, but the pattern does not scale if a `listSessions()` endpoint were added: N sessions would produce N outbound HTTP calls to the game engine, one per session.
-
-**Potential approaches:**
-
-- **Snapshot game state in the session.** Store a copy of the final board and status inside the `Session` entity when the simulation completes. `getSession()` for a completed game would need no call to the engine at all. Active/simulating sessions could still call the engine. The tradeoff is that the session table carries redundant data and must be kept consistent with the engine.
-
-- **Batch endpoint on the game engine.** Add `GET /games?ids=id1,id2,...` that returns multiple games in a single response. `listSessions()` could then fan out one batch call rather than N individual ones. This requires a contract change in the engine API.
-
-- **Caching.** A short-lived cache (e.g. Caffeine) on `GameEngineClient.getGame()` would collapse repeated lookups for the same game within a time window. Suitable for read-heavy list views where slight staleness is acceptable.
+In Session and 
 
 ---
 

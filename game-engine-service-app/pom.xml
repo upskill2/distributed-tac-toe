@@ -84,12 +84,6 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <image>
-                        <name>distributed-tac-toe/${project.artifactId}:latest</name>
-                        <env>
-                            <BP_JVM_VERSION>25</BP_JVM_VERSION>
-                        </env>
-                    </image>
                     <excludes>
                         <exclude>
                             <groupId>org.projectlombok</groupId>

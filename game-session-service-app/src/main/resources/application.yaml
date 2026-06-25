@@ -2,7 +2,10 @@ spring:
   application:
     name: game-session-service-app
   config:
-    import: "optional:configserver:http://localhost:8888"
+    import: "configserver:"
+  cloud:
+    config:
+      uri: http://localhost:8888
 
 eureka:
   client:

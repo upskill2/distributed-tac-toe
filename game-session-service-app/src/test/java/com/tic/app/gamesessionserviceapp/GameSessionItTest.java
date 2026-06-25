@@ -37,7 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
                 "eureka.client.enabled=false"
         }
 )
-class SessionControllerIT {
+class GameSessionItTest {
 
     @Autowired WebApplicationContext context;
     @Autowired ObjectMapper objectMapper;
