@@ -1,4 +1,5 @@
 /target/
+/.claude/
 !.mvn/wrapper/maven-wrapper.jar
 CLAUDE.md
 .claudeignore
