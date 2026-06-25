@@ -20,6 +20,8 @@ docker compose up --build -d
 
 Open **http://localhost:8080** when all services are up
 
+![img.png](img.png)
+
 Stop everything with:
 
 ```bash
@@ -29,6 +31,8 @@ docker compose down
 ---
 
 ## Optional Enhancements
+
+### ✅ Virtual threads
 
 ### ✅ Real-Time Updates via SSE
 `POST /sessions/{id}/simulate` keeps the HTTP connection open and pushes individual `move` SSE events as the simulation progresses
